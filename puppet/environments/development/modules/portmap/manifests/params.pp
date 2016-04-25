@@ -1,3 +1,0 @@
-class portmap::params {
-
-}

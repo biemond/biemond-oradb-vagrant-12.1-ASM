@@ -1,6 +1,6 @@
 node 'dbasm.example.com' {
   include oradb_asm_os
-  include nfs
+  include nfs_defintion
   include oradb_asm
 }
 
@@ -9,10 +9,10 @@ Package{allow_virtual => false,}
 # operating settings for Database & Middleware
 class oradb_asm_os {
 
-  # swap_file::files { 'swap_file':
+  # swap_file::files { 'swap_file_custom':
   #   ensure       => present,
-  #   swapfile     => '/var/swap.1',
-  #   swapfilesize => '8192000000'
+  #   swapfilesize => '6.0 GB',
+  #   swapfile     => '/tmp/swapfile.custom',
   # }
 
   # set the tmpfs
@@ -74,7 +74,7 @@ class oradb_asm_os {
               'libstdc++-devel.x86_64',
               'sysstat.x86_64','unixODBC-devel','glibc.i686','libXext.x86_64',
               'libXtst.x86_64','xorg-x11-xauth.x86_64',
-              'elfutils-libelf-devel','kernel-debug']
+              'elfutils-libelf-devel','kernel-debug','psmisc']
 
 
   package { $install:
@@ -114,7 +114,7 @@ class oradb_asm_os {
 
 }
 
-class nfs {
+class nfs_defintion {
   require oradb_asm_os
 
   file { '/home/nfs_server_data':
@@ -127,17 +127,29 @@ class nfs {
     require =>  User['grid'],
   }
 
-  class { 'nfs::server':
-    package => latest,
-    service => running,
-    enable  => true,
+  class { '::nfs':
+    server_enabled => true,
+    client_enabled => true,
   }
 
-  nfs::export { '/home/nfs_server_data':
-    options => [ 'rw', 'sync', 'no_wdelay','insecure_locks','no_root_squash' ],
-    clients => [ '*' ],
-    require => [File['/home/nfs_server_data'],Class['nfs::server'],],
+  nfs::server::export{ '/home/nfs_server_data':
+    ensure      => 'mounted',
+    options_nfs => 'rw sync no_wdelay insecure_locks no_root_squash',
+    clients     => '10.10.10.0/24(rw,insecure,async,no_root_squash) localhost(rw)',
+    require     => [File['/home/nfs_server_data'],Class['nfs'],],
   }
+
+  # class { 'nfs::server':
+  #   package => latest,
+  #   service => running,
+  #   enable  => true,
+  # }
+
+  # nfs::export { '/home/nfs_server_data':
+  #   options => [ 'rw', 'sync', 'no_wdelay','insecure_locks','no_root_squash' ],
+  #   clients => [ '*' ],
+  #   require => [File['/home/nfs_server_data'],Class['nfs::server'],],
+  # }
 
   file { '/nfs_client':
     ensure  => directory,
@@ -149,28 +161,37 @@ class nfs {
     require =>  User['grid'],
   }
 
-  mounts { 'Mount point for NFS data':
-    ensure  => present,
-    source  => 'dbasm:/home/nfs_server_data',
-    dest    => '/nfs_client',
-    type    => 'nfs',
-    opts    => 'rw,bg,hard,nointr,tcp,vers=3,timeo=600,rsize=32768,wsize=32768,actimeo=0  0 0',
-    require => [File['/nfs_client'],Nfs::Export['/home/nfs_server_data'],]
+  nfs::client::mount { '/nfs_client':
+    server        => 'dbasm',
+    share         => '/home/nfs_server_data',
+    remounts      => true,
+    atboot        => true,
+    options_nfs   => 'rw,bg,hard,nointr,tcp,vers=3,timeo=600,rsize=32768,wsize=32768',
+    require       => [File['/nfs_client'],Nfs::Server::Export['/home/nfs_server_data'],]
   }
+
+  # mounts { 'Mount point for NFS data':
+  #   ensure  => present,
+  #   source  => 'dbasm:/home/nfs_server_data',
+  #   dest    => '/nfs_client',
+  #   type    => 'nfs',
+  #   opts    => 'rw,bg,hard,nointr,tcp,vers=3,timeo=600,rsize=32768,wsize=32768,actimeo=0  0 0',
+  #   require => [File['/nfs_client'],Nfs::Export['/home/nfs_server_data'],]
+  # }
 
   exec { '/bin/dd if=/dev/zero of=/nfs_client/asm_sda_nfs_b1 bs=1M count=7520':
     user      => 'grid',
     group     => 'asmadmin',
     logoutput => true,
     unless    => '/usr/bin/test -f /nfs_client/asm_sda_nfs_b1',
-    require   => Mounts['Mount point for NFS data'],
+    require   => Nfs::Client::Mount['/nfs_client'],
   }
   exec { '/bin/dd if=/dev/zero of=/nfs_client/asm_sda_nfs_b2 bs=1M count=7520':
     user      => 'grid',
     group     => 'asmadmin',
     logoutput => true,
     unless    => '/usr/bin/test -f /nfs_client/asm_sda_nfs_b2',
-    require   => [Mounts['Mount point for NFS data'],
+    require   => [Nfs::Client::Mount['/nfs_client'],
                   Exec['/bin/dd if=/dev/zero of=/nfs_client/asm_sda_nfs_b1 bs=1M count=7520']],
   }
 
@@ -179,7 +200,7 @@ class nfs {
     group     => 'asmadmin',
     logoutput => true,
     unless    => '/usr/bin/test -f /nfs_client/asm_sda_nfs_b3',
-    require   => [Mounts['Mount point for NFS data'],
+    require   => [Nfs::Client::Mount['/nfs_client'],
                   Exec['/bin/dd if=/dev/zero of=/nfs_client/asm_sda_nfs_b1 bs=1M count=7520'],
                   Exec['/bin/dd if=/dev/zero of=/nfs_client/asm_sda_nfs_b2 bs=1M count=7520'],],
   }
@@ -189,7 +210,7 @@ class nfs {
     group     => 'asmadmin',
     logoutput => true,
     unless    => '/usr/bin/test -f /nfs_client/asm_sda_nfs_b4',
-    require   => [Mounts['Mount point for NFS data'],
+    require   => [Nfs::Client::Mount['/nfs_client'],
                   Exec['/bin/dd if=/dev/zero of=/nfs_client/asm_sda_nfs_b1 bs=1M count=7520'],
                   Exec['/bin/dd if=/dev/zero of=/nfs_client/asm_sda_nfs_b2 bs=1M count=7520'],
                   Exec['/bin/dd if=/dev/zero of=/nfs_client/asm_sda_nfs_b3 bs=1M count=7520'],],
@@ -207,7 +228,7 @@ class nfs {
 }
 
 class oradb_asm {
-  require oradb_asm_os,nfs
+  require oradb_asm_os,nfs_defintion
 
     oradb::installasm{ 'db_linux-x64':
       version                => hiera('db_version'),

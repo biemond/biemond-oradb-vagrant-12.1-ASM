@@ -1,57 +1,53 @@
 # == Class: nfs::client
 #
-# Installs the NFS client software, allowing the mount resource type to mount
-# NFS exports.
+# This class exists to
+#  1. order the loading of classes
+#  2. including all needed classes for nfs as a client
 #
-# === Parameters
 #
-# [*ensure*]
-#   Corresponds to the ensure parameter of the Package resource type.
+# === Links
 #
-# === Variables
+# * {Puppet Docs: Using Parameterized Classes}[http://j.mp/nVpyWY]
 #
-# This module requires no variables.
-#
-# === Examples
-#
-#  class { 'nfs::client':
-#    ensure => installed,
-#  }
 #
 # === Authors
 #
-# Joseph Beard <joseph@josephbeard.net>
+# * Daniel Klockenkaemper <mailto:dk@marketing-factory.de>
 #
-# === Copyright
-#
-# Copyright 2014 Joseph Beard
-#
+
 class nfs::client (
-    $ensure = installed,
+  $ensure                     = $::nfs::ensure,
+  $nfs_v4                     = $::nfs::nfs_v4_client,
+  $nfs_v4_mount_root          = $::nfs::nfs_v4_mount_root,
+  $nfs_v4_idmap_domain        = $::nfs::nfs_v4_idmap_domain
 ) {
 
-    require stdlib
+  anchor {'nfs::client::begin': }
+  anchor {'nfs::client::end': }
 
-    anchor { 'nfs::client::begin': }
+  # package(s)
+  class { 'nfs::client::package': }
 
-    case $::osfamily {
-        'RedHat': {
-            class { 'nfs::client::rhel':
-                ensure => $ensure,
-            }
-        }
+  # configuration
+  class { 'nfs::client::config': }
 
-        'Debian': {
-            class { 'nfs::client::debian':
-                ensure => $ensure,
-            }
-        }
+  # service(s)
+  class { 'nfs::client::service': }
 
-        default : {
-            fail("nfs::client is not currently supported on ${::operatingsystem}")
-        }
-    }
-
-    anchor { 'nfs::client::end': }
-
+  if $ensure == 'present' {
+    # we need the software before configuring it
+    Anchor['nfs::client::begin']
+    -> Class['nfs::client::package']
+    -> Class['nfs::client::config']
+    # we need the software and a working configuration before running a service
+    Class['nfs::client::package'] -> Class['nfs::client::service']
+    Class['nfs::client::config']  -> Class['nfs::client::service']
+    Class['nfs::client::service'] -> Anchor['nfs::client::end']
+  } else {
+    # make sure all services are getting stopped before software removal
+    Anchor['nfs::client::begin']
+    -> Class['nfs::client::service']
+    -> Class['nfs::client::package']
+    -> Anchor['nfs::client::end']
+  }
 }
