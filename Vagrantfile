@@ -7,12 +7,13 @@ VAGRANTFILE_API_VERSION = "2"
 Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 
   config.vm.define "dbasm", primary: true do |dbasm|
-    dbasm.vm.box = "centos-6.6-x86_64"
-    dbasm.vm.box_url = "https://dl.dropboxusercontent.com/s/ijt3ppej789liyp/centos-6.6-x86_64.box"
+
+    dbasm.vm.box = "centos-7-1511-x86_64"
+    dbasm.vm.box_url = "https://dl.dropboxusercontent.com/s/filvjntyct1wuxe/centos-7-1511-x86_64.box"
 
     dbasm.vm.provider :vmware_fusion do |v, override|
-      override.vm.box = "centos-6.6-x86_64-vmware"
-      override.vm.box_url = "https://dl.dropboxusercontent.com/s/7ytmqgghoo1ymlp/centos-6.6-x86_64-vmware.box"
+      override.vm.box = "centos-7-1511-x86_64-vmware"
+      override.vm.box_url = "https://dl.dropboxusercontent.com/s/h5g5kqjrzq5dn53/centos-7-1511-x86_64-vmware.box"
     end
 
     dbasm.vm.hostname = "dbasm.example.com"
@@ -32,13 +33,30 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
       vb.customize ["modifyvm"     , :id, "--cpus"  , 2]
     end
 
-    dbasm.vm.provision :shell, :inline => "ln -sf /vagrant/puppet/hiera.yaml /etc/puppet/hiera.yaml;rm -rf /etc/puppet/modules;ln -sf /vagrant/puppet/modules /etc/puppet/modules"
+    dbasm.vm.provision :shell, :inline => "mkdir -p /etc/puppet;ln -sf /vagrant/puppet/hiera.yaml /etc/puppet/hiera.yaml;rm -rf /etc/puppet/modules;ln -sf /vagrant/puppet/modules /etc/puppet/modules"
 
     dbasm.vm.provision :puppet do |puppet|
-      puppet.manifests_path    = "puppet/manifests"
-      puppet.module_path       = "puppet/modules"
-      puppet.manifest_file     = "site.pp"
-      puppet.options           = "--verbose --hiera_config /vagrant/puppet/hiera.yaml"
+
+      puppet.environment_path     = "puppet/environments"
+      puppet.environment          = "development"
+
+      puppet.manifests_path       = "puppet/environments/development/manifests"
+      puppet.manifest_file        = "site.pp"
+
+      # puppet.manifests_path    = "puppet/manifests"
+      # puppet.module_path       = "puppet/modules"
+      # puppet.manifest_file     = "site.pp"
+      #puppet.options           = "--verbose --hiera_config /vagrant/puppet/hiera.yaml"
+
+      puppet.options           = [
+                                  '--verbose',
+                                  '--report',
+                                  '--trace',
+#                                  '--debug',
+#                                  '--parser future',
+                                  '--strict_variables',
+                                  '--hiera_config /vagrant/puppet/hiera.yaml'
+                                 ]
 
       puppet.facter = {
         "environment" => "development",
