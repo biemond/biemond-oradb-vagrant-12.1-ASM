@@ -1,10 +1,11 @@
 # encoding: UTF-8
-require 'orabase/utils/schemas'
+require 'ora_utils/schemas'
 require 'utils/hash'
 
 newparam(:datafiles, :array_matching => :all) do
   class ::Puppet::Type::Ora_database::ParameterDatafiles
     include EasyType
+    include EasyType::Mungers::Array
     include OraUtils::Schemas
     include Utils::Hash
 
@@ -25,8 +26,7 @@ newparam(:datafiles, :array_matching => :all) do
     VALIDATION = OraUtils::Schemas::DATAFILE
 
     def validate(value)
-       value = [value] if value.is_a?(Hash) # ensure, it is an array
-       value.each {|v| ClassyHash.validate_strict(v, VALIDATION)}
+      value.each {|v| ClassyHash.validate_strict(v, VALIDATION)}
     end
 
     def value

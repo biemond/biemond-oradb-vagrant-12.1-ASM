@@ -1,4 +1,4 @@
-require 'orabase/utils/oracle_access'
+require 'ora_utils/oracle_access'
 require 'easy_type'
 
 Puppet::Type.type(:ora_role).provide(:simple) do

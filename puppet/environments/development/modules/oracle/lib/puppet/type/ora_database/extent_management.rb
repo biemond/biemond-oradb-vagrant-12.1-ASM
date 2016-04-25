@@ -1,5 +1,5 @@
 # encoding: UTF-8
-require 'orabase/utils/schemas'
+require 'ora_utils/schemas'
 require 'utils/hash'
 
 newparam(:extent_management) do

@@ -1,5 +1,5 @@
 # encoding: UTF-8
-require 'orabase/utils/schemas'
+require 'ora_utils/schemas'
 require 'utils/hash'
 
 newparam(:default_temporary_tablespace) do
@@ -21,14 +21,10 @@ newparam(:default_temporary_tablespace) do
             file_name  => 'tmp.dbs',
             size       => '10G',
             reuse      =>  true,
-            autoextend => {
-              maxsize => 'unlimited',
-              next    => '1G',
-            }
           }
           extent_management => {
             type          => 'local',
-            autoallocate  => true, (mutual exclusive with uniform segment size)
+            autoallocate  => true,
             uniform_size  => '5G',
           }
         }
@@ -53,15 +49,13 @@ newparam(:default_temporary_tablespace) do
       validate_extent_management(value_for('extent_management'))
     end
     
+
     def value
       use_hash(@value)
-      tempfile_data = value_for('tempfile')
       command_segment = "#{value_for('type')} default temporary tablespace #{value_for('name')}"
-      command_segment << " tempfile #{datafiles(tempfile_data)}" if exists?('tempfile')
+      command_segment << " datafile #{datafiles(datafile_data)}" if exists?('datafile')
       command_segment << " #{extent_management(value_for('extent_management'))}" if exists?('extent_management')
-      command_segment << "\n"
-      command_segment
     end
   end
-
+  
 end

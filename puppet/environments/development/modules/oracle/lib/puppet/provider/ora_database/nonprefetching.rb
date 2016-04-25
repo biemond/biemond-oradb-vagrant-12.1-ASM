@@ -1,4 +1,4 @@
-require 'orabase/utils/oracle_access'
+require 'ora_utils/oracle_access'
 require 'easy_type'
 
 Puppet::Type.type(:ora_database).provide(:nonprefetching) do
@@ -19,10 +19,6 @@ Puppet::Type.type(:ora_database).provide(:nonprefetching) do
 
   def available_databases
     Pathname.glob("#{resource.oracle_base}/admin/*").collect {|e| e.basename.to_s}
-    #
-    # TODO: Discuss with Ed, why he prefers this. Atv this point in time it doesn't work consistently
-    #
-    # Pathname.glob("#{resource.oracle_home}/dbs/hc_#{resource.name}.dat").collect {|e|e.basename.to_s.scan(/hc_(.*).dat/).flatten}
-    #
   end
+
 end

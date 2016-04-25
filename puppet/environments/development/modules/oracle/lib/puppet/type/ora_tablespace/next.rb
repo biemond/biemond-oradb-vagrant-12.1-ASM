@@ -10,13 +10,8 @@ newproperty(:next) do
     increment * block_size
   end
 
-
   on_apply do | command_builder|
-    if resource[:autoextend] == :on
-      "next #{value}"
-    else
-      Puppet.warning "property next changed on ora_tablespace[#{resource[:name]}], but autoextend is off. "
-      nil
-    end
+    "next #{resource[:next]}" if resource[:autoextend] == :on
   end
+
 end

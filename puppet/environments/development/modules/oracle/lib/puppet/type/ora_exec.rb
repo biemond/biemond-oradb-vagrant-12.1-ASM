@@ -2,8 +2,8 @@ require 'pathname'
 $:.unshift(Pathname.new(__FILE__).dirname.parent.parent)
 $:.unshift(Pathname.new(__FILE__).dirname.parent.parent.parent.parent + 'easy_type' + 'lib')
 require 'easy_type'
-require 'orabase/utils/oracle_access'
-require 'orabase/utils/title_parser'
+require 'ora_utils/oracle_access'
+require 'ora_utils/title_parser'
 
 
 module Puppet
@@ -20,21 +20,14 @@ module Puppet
 
     map_title_to_sid(:statement) { /^((@?.*?)?(\@.*?)?)$/}
 
-    def refresh
-      provider.execute
-    end
-
     parameter :name
     property  :statement
     parameter :sid
 
     parameter :timeout
-    parameter :cwd
     parameter :logoutput
     parameter :password
     parameter :username
-    parameter :unless
-    parameter :refreshonly
 
   end
 

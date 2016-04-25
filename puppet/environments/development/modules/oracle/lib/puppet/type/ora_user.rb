@@ -2,8 +2,8 @@ require 'pathname'
 $:.unshift(Pathname.new(__FILE__).dirname.parent.parent)
 $:.unshift(Pathname.new(__FILE__).dirname.parent.parent.parent.parent + 'easy_type' + 'lib')
 require 'easy_type'
-require 'orabase/utils/oracle_access'
-require 'orabase/utils/title_parser'
+require 'ora_utils/oracle_access'
+require 'ora_utils/title_parser'
 
 
 module Puppet
@@ -27,7 +27,7 @@ module Puppet
       set_command(:sql)
 
       to_get_raw_resources do
-        sql_on_all_database_sids "select * from dba_users"
+        sql_on_all_sids "select * from dba_users"
       end
 
       on_create do | command_builder |
@@ -40,7 +40,7 @@ module Puppet
       end
 
       on_destroy do | command_builder |
-        command_builder.add("drop user #{username} cascade", :sid => sid)
+        command_builder.add("drop user #{username}", :sid => sid)
       end
 
 

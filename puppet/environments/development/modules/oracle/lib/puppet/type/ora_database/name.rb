@@ -1,9 +1,8 @@
-require 'orabase/utils/mungers'
+require 'ora_utils/mungers'
 
 newparam(:name) do
   include EasyType
   include EasyType::Validators::Name
-
   desc "The database name"
 
   isnamevar

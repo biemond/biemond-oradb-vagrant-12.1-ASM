@@ -2,8 +2,8 @@ require 'pathname'
 $:.unshift(Pathname.new(__FILE__).dirname.parent.parent)
 $:.unshift(Pathname.new(__FILE__).dirname.parent.parent.parent.parent + 'easy_type' + 'lib')
 require 'easy_type'
-require 'orabase/utils/oracle_access'
-require 'orabase/utils/title_parser'
+require 'ora_utils/oracle_access'
+require 'ora_utils/title_parser'
 
 
 module Puppet
@@ -19,18 +19,18 @@ module Puppet
     ensurable
 
     to_get_raw_resources do
-      sql_on_all_database_sids template('puppet:///modules/oracle/ora_tablespace/index.sql.erb', binding)
+      sql_on_all_sids(template('puppet:///modules/oracle/ora_tablespace/index.sql', binding))
     end
 
     on_create do | command_builder |
-      base_command = "create #{ts_type} #{ts_contents} tablespace \"#{tablespace_name}\""
+      base_command = "create #{ts_type} #{contents} tablespace \"#{tablespace_name}\""
       base_command << " segment space management #{segment_space_management}" if segment_space_management
       base_command
       command_builder.add(base_command, :sid => sid)
     end
 
     on_modify do | command_builder |
-      # Allow individual properties to do there stuff
+      command_builder.add("alter tablespace \"#{tablespace_name}\"", :sid => sid)
     end
 
     on_destroy do | command_builder |
@@ -45,9 +45,9 @@ module Puppet
 
     parameter :timeout
     property  :bigfile
+    parameter :datafile
+    property  :size
     group(:autoextend_group) do
-      parameter :datafile
-      property  :size
       property  :autoextend
       property  :next
       property  :max_size
@@ -60,11 +60,6 @@ module Puppet
     def ts_type
       (self['bigfile'] == :yes) ? 'bigfile' : ''
     end
-
-    def ts_contents
-      (self['contents'] != :permanent) ? self['contents'] : ''
-    end
-
 
   end
 end

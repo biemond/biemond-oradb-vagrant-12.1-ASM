@@ -1,4 +1,4 @@
-require 'orabase/utils/oracle_access'
+require 'ora_utils/oracle_access'
 
 Puppet::Type.type(:ora_listener).provide(:listener) do
   include OraUtils::OracleAccess

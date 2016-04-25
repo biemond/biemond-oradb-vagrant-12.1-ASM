@@ -2,16 +2,16 @@ require 'pathname'
 $:.unshift(Pathname.new(__FILE__).dirname.parent.parent)
 $:.unshift(Pathname.new(__FILE__).dirname.parent.parent.parent.parent + 'easy_type' + 'lib')
 require 'easy_type'
-require 'orabase/utils/commands'
-require 'orabase/utils/title_parser'
-require 'orabase/resources/ora_asm_volume'
+require 'ora_utils/asm_index_parser'
+require 'ora_utils/asm_access'
+require 'ora_utils/title_parser'
 
 
 # @nodoc
 module Puppet
   newtype(:ora_asm_volume) do
     include EasyType
-    include ::OraUtils::Commands
+    include ::OraUtils::AsmAccess
     extend ::OraUtils::TitleParser
 
     desc "The ASM volumes"
@@ -21,35 +21,29 @@ module Puppet
     set_command(:asmcmd)
 
     to_get_raw_resources do
-      ::Resources::OraAsmVolume.raw_resources
+      volume_info = asmcmd("volinfo -a", :sid => sid)
+      parser = OraUtils::AsmIndexParser.new(volume_info)
+      parser.parse
     end
 
     on_create do | command_builder |
-      command_builder.add( "volcreate -G #{diskgroup} -s #{size}M #{volume_name}", :sid => sid)
+      command_builder.add( "volcreate -G #{diskgroup} -s #{size} #{volume_name}", :sid => sid)
     end
 
     on_modify do | command_builder|
-      Puppet.warning "Modification of asm volumes not supported yet"
-      nil
+      Puppet.info "Modification of asm volumes not supported yet"
     end
 
     on_destroy do |command_builder|
       command_builder.add("voldelete -G #{diskgroup} #{volume_name}", :sid => sid)
     end
 
-    def self.remove_colon_from_diskgroup
-      # Chopping of @ end using length of 16 because max length of SID is 16
-      lambda { |diskgroup| diskgroup.nil? ? (fail ArgumentError, 'invalid diskgroup in title') : diskgroup.chop} 
-    end
-
-
-    map_title_to_asm_sid([:diskgroup, remove_colon_from_diskgroup], :volume_name) { /^((.*\:)?(@?.*?)?(\@.*?)?)$/}
-
+    map_title_to_sid([:diskgroup, :chop.to_proc], :volume_name) { /^((.*\:)?(@?.*?)?(\@.*?)?)$/}
     #
     # property  :new_property  # For every property and parameter create a parameter file
     #
     parameter :name
-    parameter :asm_sid      # The included file is asm_sid, but the parameter is named sid
+    parameter :sid
     parameter :volume_name
 		parameter :diskgroup
     parameter :volume_device

@@ -1,5 +1,5 @@
 require 'easy_type'
-require 'orabase/utils/oracle_access'
+require 'ora_utils/oracle_access'
 
 Puppet::Type.type(:ora_thread).provide(:simple) do
   include EasyType::Provider

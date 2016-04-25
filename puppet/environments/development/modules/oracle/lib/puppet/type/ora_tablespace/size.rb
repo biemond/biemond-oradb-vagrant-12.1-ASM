@@ -25,8 +25,10 @@ newproperty(:size) do
     end
   end
 
+
+
   on_modify do | command_builder|
-    command_builder.after "alter tablespace #{resource[:tablespace_name]} resize #{resource[:size]}", :sid => sid
+    "resize #{resource[:size]}"
   end
 
   on_create do | command_builder|
@@ -36,6 +38,7 @@ newproperty(:size) do
       "datafile '#{resource[:datafile]}' size #{resource[:size]}"
     end
   end
+
 
   private
 

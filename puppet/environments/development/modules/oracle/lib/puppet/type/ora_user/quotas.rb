@@ -7,7 +7,7 @@ newproperty(:quotas) do
   to_translate_to_resource do | raw_resource|
     username = raw_resource.column_data('USERNAME').upcase
     sid = raw_resource.column_data('SID')
-    @raw_quotas ||= sql_on_all_database_sids "select * from dba_ts_quotas"
+    @raw_quotas ||= sql_on_all_sids "select * from dba_ts_quotas"
     quota_for(username, sid)
   end
 
@@ -21,10 +21,6 @@ newproperty(:quotas) do
       return_value.merge!({ tablespace_name.upcase => quota.to_s })
     end
     return_value
-  end
-
-  def insync?(value)
-    value == without_null_quotas(should)
   end
 
   def change_to_s(from, to)
@@ -49,10 +45,6 @@ newproperty(:quotas) do
       return_value.merge!({ tablespace_name(raw_line) => size(raw_line)})
     end
     return_value
-  end
-
-  def without_null_quotas(quotas)
-    Hash[quotas.select{|k,v| v != '0'}]
   end
 
   def self.tablespace_name(raw)

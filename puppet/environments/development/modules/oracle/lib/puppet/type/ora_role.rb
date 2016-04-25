@@ -2,8 +2,8 @@ require 'pathname'
 $:.unshift(Pathname.new(__FILE__).dirname.parent.parent)
 $:.unshift(Pathname.new(__FILE__).dirname.parent.parent.parent.parent + 'easy_type' + 'lib')
 require 'easy_type'
-require 'orabase/utils/oracle_access'
-require 'orabase/utils/title_parser'
+require 'ora_utils/oracle_access'
+require 'ora_utils/title_parser'
 
 module Puppet
   #
@@ -22,7 +22,7 @@ module Puppet
     ensurable
 
     to_get_raw_resources do
-      sql_on_all_database_sids "select * from dba_roles"
+      sql_on_all_sids "select * from dba_roles"
     end
 
     on_create do | command_builder |
@@ -30,7 +30,7 @@ module Puppet
     end
 
     on_modify do | command_builder |
-      info "Role alteration not possible, command ignored"
+      command_builder.add("alter role# {role_name}", :sid => sid)
     end
 
     on_destroy do | command_builder |
@@ -43,7 +43,6 @@ module Puppet
     parameter :role_name
     parameter :sid
     property  :password
-    property  :grants
 
   end
 end

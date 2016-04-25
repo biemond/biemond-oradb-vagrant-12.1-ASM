@@ -2,10 +2,9 @@ require 'pathname'
 $:.unshift(Pathname.new(__FILE__).dirname.parent.parent)
 $:.unshift(Pathname.new(__FILE__).dirname.parent.parent.parent.parent + 'easy_type' + 'lib')
 require 'easy_type'
-require 'orabase/utils/oracle_access'
-require 'orabase/utils/title_parser'
-require 'orabase/utils/ora_tab'
-require 'orabase/resources/ora_asm_diskgroup'
+require 'ora_utils/oracle_access'
+require 'ora_utils/title_parser'
+require 'ora_utils/ora_tab'
 
 module Puppet
   #
@@ -26,12 +25,15 @@ module Puppet
     set_command(:sql)
 
     to_get_raw_resources do
-      ::Resources::OraAsmDiskgroup.raw_resources
+      oratab = OraUtils::OraTab.new
+      sids = oratab.running_asm_sids
+      statement = template('puppet:///modules/oracle/ora_asm_diskgroup/index.sql', binding)
+      sql_on(sids, statement, :username => 'sysasm', :os_user => default_asm_user)
     end
 
     on_create do | command_builder |
       statement = template('puppet:///modules/oracle/ora_asm_diskgroup/create.sql.erb', binding)
-      command_builder.add(statement, :sid => sid)
+      command_builder.add(statement, :sid => sid, :username => 'sysasm', :os_user => default_asm_user)
     end
 
     on_modify do | command_builder |
@@ -41,15 +43,15 @@ module Puppet
 
     on_destroy do | command_builder |
       statement = template('puppet:///modules/oracle/ora_asm_diskgroup/destroy.sql.erb', binding)
-      command_builder.add(statement, :sid => sid)
+      command_builder.add(statement, :sid => sid, :username => 'sysasm', :os_user => default_asm_user)
     end
 
 
-    map_title_to_asm_sid(:groupname) { /^((@?.*?)?(\@.*?)?)$/}
+    map_title_to_sid(:groupname) { /^((@?.*?)?(\@.*?)?)$/}
 
     parameter :name
     parameter :groupname
-    parameter :asm_sid      # The included file is asm_sid, but the parameter is named sid
+    parameter :sid
 
     parameter :diskgroup_state
     property  :redundancy_type

@@ -2,8 +2,8 @@ require 'pathname'
 $:.unshift(Pathname.new(__FILE__).dirname.parent.parent)
 $:.unshift(Pathname.new(__FILE__).dirname.parent.parent.parent.parent + 'easy_type' + 'lib')
 require 'easy_type'
-require 'orabase/utils/oracle_access'
-require 'orabase/utils/title_parser'
+require 'ora_utils/oracle_access'
+require 'ora_utils/title_parser'
 
 
 module Puppet
@@ -21,7 +21,7 @@ module Puppet
     desc "This resource allows you to manage threads in an Oracle database"
 
     to_get_raw_resources do
-      sql_on_all_database_sids %q{select thread#, enabled from v$thread}
+      sql_on_all_sids %q{select thread#, enabled from v$thread}
     end
 
     on_create do | command_builder |

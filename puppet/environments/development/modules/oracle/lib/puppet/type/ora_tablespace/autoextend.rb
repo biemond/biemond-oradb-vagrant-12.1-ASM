@@ -18,12 +18,7 @@ newproperty(:autoextend) do
     end
   end
 
-  on_modify do | command_builder|
-    command_builder.add "alter database datafile '#{resource[:datafile]}' autoextend #{value}", :sid => sid 
-    nil
-  end
-
-  on_create do | command_builder|
+  on_apply do | command_builder|
     "autoextend #{resource[:autoextend]}"
   end
 end

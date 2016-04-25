@@ -2,9 +2,9 @@ require 'pathname'
 $:.unshift(Pathname.new(__FILE__).dirname.parent.parent)
 $:.unshift(Pathname.new(__FILE__).dirname.parent.parent.parent.parent + 'easy_type' + 'lib')
 require 'easy_type'
-require 'orabase/utils/oracle_access'
-require 'orabase/utils/title_parser'
-require 'orabase/utils/ora_tab'
+require 'ora_utils/oracle_access'
+require 'ora_utils/title_parser'
+require 'ora_utils/ora_tab'
 
 TITLE_PATTERN = /^((.*?\/)?(.*?)(:.*?)?(\@.*?)?)$/
 
@@ -24,6 +24,11 @@ module Puppet
     end
 
     def apply(command_builder)
+      if is_number?(self[:value]) || is_boolean?(self[:value])
+        specified_value = self[:value]
+      else
+        specified_value = "'#{self[:value]}'"
+      end
       statement = "alter system set #{parameter_name}=#{specified_value} scope=#{scope}"
       statement+= " sid='#{for_sid}'" if scope == 'SPFILE'
       command_builder.add(statement, :sid => sid)
@@ -53,17 +58,6 @@ module Puppet
 
     private
 
-    def specified_value
-      value = self[:value].size <= 1 ? self[:value].first : self[:value]
-      if is_number?(value) || is_boolean?(value)
-        specified_value = value
-      elsif value.is_a?(Array)
-        specified_value = value.map{|e| "'#{e}'"}.join(',')
-      else
-        specified_value = "'#{value}'"
-      end
-    end
-
     def is_number?(value)
       (Integer(value) rescue false) && true
     end
@@ -84,7 +78,7 @@ module Puppet
     end
 
     def self.parse_sid
-      lambda { |sid_name| sid_name.nil? ? default_database_sid : sid_name[1..17]}
+      lambda { |sid_name| sid_name.nil? ? default_sid : sid_name[1..17]}
     end
 
 
@@ -113,47 +107,21 @@ module Puppet
 
 
     def self.specified_parameters_for(set)
-      set = without_empty_values(set)
-      merge_multiple_values(set)
+      set.select{|p| p['DISPLAY_VALUE'] != ''}
     end
 
     def self.memory
-      sql_on_all_sids %{select 'MEMORY' as scope, t.issys_modifiable, t.name, t.display_value, b.instance_name as for_sid  from gv$parameter t, gv$instance b where t.inst_id = b.instance_number and t.issys_modifiable <> 'FALSE'}
+      sql_on_all_sids %{select 'MEMORY' as scope, t.issys_modifiable, t.name, t.value, t.display_value, b.instance_name as for_sid from gv$parameter t, gv$instance b where t.inst_id = b.instance_number and t.issys_modifiable <> 'FALSE'}
     end
 
     def self.spfile
-      sql_on_all_sids %q{select 'SPFILE' as scope, t.isspecified, t.name, t.display_value, t.sid as for_sid from gv$spparameter t, gv$instance b where t.inst_id = b.instance_number and t.isspecified = 'TRUE'}
+      sql_on_all_sids %q{select 'SPFILE' as scope, t.isspecified, t.name, t.value, t.display_value, t.sid as for_sid from gv$spparameter t, gv$instance b where t.inst_id = b.instance_number and t.isspecified = 'TRUE'}
     end
 
-    def self.without_empty_values(set)
-      set.select{|p| p['DISPLAY_VALUE'] != ''}
-    end
-    #
-    # Returns the parameters that have multiple values
-    #
-    def self.with_multiple_values(set)
-      keys = set.map {|p| "#{p['NAME']}:#{p['FOR_SID']}@#{p['SID']}"}
-      keys.find_all {|e| keys.count(e) > 1 }.uniq
-    end
-
-    #
-    # Merge parameter values if there are multiple values
-    #
-    def self.merge_multiple_values(set)
-      multiples = with_multiple_values(set)
-      multiples.each do | parameter|
-        values = set.select {|e|  "#{e['NAME']}:#{e['FOR_SID']}@#{e['SID']}" == parameter}
-        values = {}.tap{ |r| values.each{ |h| h.each{ |k,v| (k == 'DISPLAY_VALUE') ? ((r[k]||=[]) << v) : (r[k] = v) } } }
-        set.delete_if {|e|  "#{e['NAME']}:#{e['FOR_SID']}@#{e['SID']}" == parameter }
-        set << EasyType::Helpers::InstancesResults[values]
-      end
-      set
-    end
-
-    def self.default_database_sid
+    def self.default_sid
       oratab = OraUtils::OraTab.new
-      oratab.default_database_sid
-    rescue RuntimeError
+      oratab.default_sid
+    rescue
       ''
     end
 

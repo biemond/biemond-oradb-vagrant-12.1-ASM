@@ -1,5 +1,5 @@
 # encoding: UTF-8
-require 'orabase/utils/schemas'
+require 'ora_utils/schemas'
 require 'utils/hash'
 
 newparam(:undo_tablespace) do
@@ -49,7 +49,6 @@ newparam(:undo_tablespace) do
       datafile_data = value_for('datafile')
       command_segment = "#{value_for('type')} undo tablespace #{value_for('name')}"
       command_segment << " datafile #{datafiles(datafile_data)}" if exists?('datafile')
-      command_segment
     end
   end
   

@@ -7,5 +7,4 @@ newparam(:datafile) do
     raw_resource.column_data('FILE_NAME')
   end
 
-
 end

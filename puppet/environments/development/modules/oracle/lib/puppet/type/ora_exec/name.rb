@@ -1,4 +1,4 @@
-require 'orabase/utils/mungers'
+require 'ora_utils/mungers'
 
 newparam(:name) do
   desc "The sql command to execute"

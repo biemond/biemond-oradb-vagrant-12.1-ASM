@@ -1,7 +1,6 @@
-require 'orabase/utils/oracle_access'
+require 'ora_utils/oracle_access'
 require 'easy_type/helpers'
-require 'orabase/utils/ora_tab'
-require 'fileutils'
+require 'ora_utils/ora_tab'
 
 
 Puppet::Type.type(:ora_exec).provide(:sqlplus) do
@@ -12,21 +11,13 @@ Puppet::Type.type(:ora_exec).provide(:sqlplus) do
   mk_resource_methods
 
   def flush
-    return if resource[:refreshonly] == :true
-    execute
-  end
-
-  def execute
-    cwd        = resource[:cwd]
-    statement  = resource[:statement]
-    sid        = sid_from_resource
-    options     = {:sid => sid, :parse => false}
-    options.merge!( :username => resource.username) unless resource.username.nil?
-    options.merge!( :password => resource.password) unless resource.password.nil?
-
-    fail "Working directory '#{cwd}' does not exist" if cwd && !File.directory?(cwd)
-    FileUtils.cd(resource[:cwd]) if resource[:cwd]
-    output = sql statement, options
+    statement = resource.to_hash[:statement]
+    if is_script?(statement)
+      script_name = statement.sub('@','')
+      statement = template(script_name, binding)
+    end
+    sid = sid_from_resource
+    output = sql statement, :username => resource.username, :password => resource.password, :sid => sid
     Puppet.debug(output) if resource.logoutput == :true
   end
 

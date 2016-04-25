@@ -1,4 +1,4 @@
-require 'orabase/utils/ora_tab'
+require 'ora_utils/ora_tab'
 
 newparam(:sid) do
   include EasyType
@@ -18,9 +18,5 @@ end
 
 def sid
   oratab = OraUtils::OraTab.new
-  begin
-   self[:sid].empty? ? oratab.default_database_sid : self[:sid]
-  rescue NoMethodError
-    oratab.default_database_sid
-  end
+  self[:sid].empty? ? oratab.default_sid : self[:sid]
 end
